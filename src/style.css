@@ -94,3 +94,11 @@ button:focus:not(:focus-visible).btn-close.position-absolute {
     text-decoration: line-through !important;
     opacity: 0.7;
 }
+
+.hLpxJr {
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: auto;
+    margin-top: 40vh;
+    /* margin-bottom: 40vh; */
+}

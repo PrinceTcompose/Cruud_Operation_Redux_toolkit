@@ -1,17 +1,20 @@
 import React, { useEffect, useState, createContext } from 'react'
 import 'bootstrap/dist/css/bootstrap.min.css';
-import axios from 'axios';
 import "./style.css"
 import Modal from './Modal';
 import List from './List';
-import { ToastContainer, toast, Slide } from 'react-toastify';
+import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { axiosAPICall } from './utils';
+// import { FlapperSpinner } from 'react-spinners-kit';
+import ClipLoader from 'react-spinners/ClipLoader';
+import { WhisperSpinner } from 'react-spinners-kit';
 
 const mycontext = createContext();
 
 const App = () => {
 
-  const [item, setItem] = useState({
+  const [formData, setFormData] = useState({
     name: "",
     email: "",
     contact_no: "",
@@ -19,19 +22,23 @@ const App = () => {
     address: ""
   });
 
-  const [locdata, setLocData] = useState([]);
+  const [user, setUser] = useState([]);
   const [edit, setEdit] = useState(false);
   const [editedItem, seteditedItem] = useState(null);
-  const [mError, setMerror] = useState("");
+  const [mobileError, setMobileError] = useState("");
   const [editedEmail, setEditedEmail] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  const fetchData = async () => {
+  const fetchData = () => {
+    setLoading(true);
     try {
-      // const res = await axios.get("https://crudcrud.com/api/a3213d631a29425887e656e3249bbacd/users");
-      const { data: res } = await axios.get("https://crudcrud.com/api/a3213d631a29425887e656e3249bbacd/users");
-      // const data = res.data;
-      // setLocData(data);
-      setLocData(res);
+      const respone = axiosAPICall('users', 'get');
+
+      respone.then((result) => {
+        setUser(result);
+        setLoading(false);
+      });
+
     }
     catch (error) {
       console.log(error);
@@ -41,10 +48,11 @@ const App = () => {
   useEffect(() => {
     fetchData();
   }, []);
+  // console.log("Local Data ==> ", user);
 
   const onAdduserFun = () => {
     setEdit(false);
-    setItem({
+    setFormData({
       name: "",
       email: "",
       contact_no: "",
@@ -54,52 +62,67 @@ const App = () => {
     seteditedItem(null);
   }
 
-  const setApiData = () => {
-    axios.post('https://crudcrud.com/api/a3213d631a29425887e656e3249bbacd/users', {
-      name: item.name,
-      email: item.email,
-      contact_no: item.contact_no,
-      date_of_birth: item.date_of_birth,
-      address: item.address
+  const setApiData = async () => {
+    const editedDataObj = {
+      name: formData.name,
+      email: formData.email,
+      contact_no: formData.contact_no,
+      date_of_birth: formData.date_of_birth,
+      address: formData.address
+    };
+    const respone = await axiosAPICall('users', 'post', editedDataObj);
+
+    console.log("Add Data ==> ", respone);
+
+    setUser(prev => [...prev, respone]);
+  }
+
+  const setEditApiData = (id) => {
+    const editedDataObj = {
+      name: formData.name,
+      email: formData.email,
+      contact_no: formData.contact_no,
+      date_of_birth: formData.date_of_birth,
+      address: formData.address
+    };
+
+    const respone = axiosAPICall(`users/${id}`, 'put', editedDataObj);
+    console.log('Edit respone :>> ', respone);
+
+    respone.then((result) => {
+      (result === "") && setUser(user.map((detail) => {
+        if (detail._id === id) return editedDataObj
+        return detail;
+      }));
     });
 
   }
 
-  const setEditApiData = (id) => {
-    axios.put(`https://crudcrud.com/api/a3213d631a29425887e656e3249bbacd/users/${id}`, {
-      name: item.name,
-      email: item.email,
-      contact_no: item.contact_no,
-      date_of_birth: item.date_of_birth,
-      address: item.address
-    })
-  }
 
-  console.log("Local Data ==> ", locdata);
 
 
   const getData = (e) => {
     e.preventDefault();
-    if (item.name == "" || item.email == "" || item.contact_no == "" || item.date_of_birth == "" || item.address == "" || mError !== "") {
+    if (formData.name === "" || formData.email === "" || formData.contact_no === "" || formData.date_of_birth === "" || formData.address === "" || mobileError !== "") {
       // alert("Please Fill All the Data");
       toast.error('Please Fill All Data !', {
         position: toast.POSITION.TOP_RIGHT
       });
     }
-    else if (edit && (item.name !== "" && item.email !== "" && item.contact_no !== "" && item.date_of_birth !== "" && item.address !== "" && mError == "")) {
-      // setLocData(locdata.map((val) => {
-      //   if (val._id == editedItem._id) return item;
+    else if (edit && (formData.name !== "" && formData.email !== "" && formData.contact_no !== "" && formData.date_of_birth !== "" && formData.address !== "" && mobileError === "")) {
+      // setUser(user.map((val) => {
+      //   if (val._id === editedItem._id) return formData;
       //   return val;
       // }))       
-      let email = locdata.find((val) => {
-        return item.email != editedEmail && val.email == item.email;
+      let email = user.find((val) => {
+        return formData.email !== editedEmail && val.email === formData.email;
       });
       if (!email) {
         setEditApiData(editedItem._id);
-        fetchData();
+
         setEdit(false);
         seteditedItem(null);
-        setItem({
+        setFormData({
           name: "",
           email: "",
           contact_no: "",
@@ -119,16 +142,16 @@ const App = () => {
       }
     }
     else {
-      // setLocData([...locdata, item]);
-      let email = locdata.find((val) => {
-        return val.email == item.email;
+      // setUser([...user, formData]);
+      let email = user.find((val) => {
+        return val.email === formData.email;
       });
 
       if (!email) {
 
         setApiData();
-        fetchData();
-        setItem({
+
+        setFormData({
           name: "",
           email: "",
           contact_no: "",
@@ -153,21 +176,44 @@ const App = () => {
   }
 
 
+  const setDelApiData = async (id) => {
+    const respone = axiosAPICall(`users/${id}`, 'delete');
+    console.log('Delete respone :>> ', respone);
+
+    respone.then((result) => {
+      (result === "") && setUser(user.filter((detail) => {
+        return detail._id !== id;
+      }));
+    });
+
+
+  }
+  const deleteItem = (id) => {
+    // setUser(user.filter((val) => val._id !==id));
+    setDelApiData(id);
+
+    toast.error('Task Deleted Successfully !', {
+      position: toast.POSITION.TOP_RIGHT
+    });
+
+  }
+
+
   const handleChange = (e) => {
     let name = e.target.name;
     let val = e.target.value;
-    setItem({ ...item, [name]: val })
+    setFormData({ ...formData, [name]: val })
   }
 
   const updateItem = (id) => {
     setEdit(true);
-    let mydata = locdata.find((val) => {
-      return val._id == id;
+    let mydata = user.find((val) => {
+      return val._id === id;
     })
     seteditedItem(mydata);
     setEditedEmail(mydata.email);
 
-    setItem({
+    setFormData({
       name: mydata.name,
       email: mydata.email,
       contact_no: mydata.contact_no,
@@ -175,84 +221,80 @@ const App = () => {
       address: mydata.address
     });
   }
-  const setDelApiData = (id) => {
-    try {
-      axios.delete(`https://crudcrud.com/api/a3213d631a29425887e656e3249bbacd/users/${id}`);
-    } catch (error) {
-      console.log(error);
-    }
 
-  }
-  const deleteItem = (id) => {
-    // setLocData(locdata.filter((val) => val._id != id));
-    setDelApiData(id);
-    fetchData();
-    toast.error('Task Deleted Successfully !', {
-      position: toast.POSITION.TOP_RIGHT
-    });
-    // window.location.reload(true);
-  }
 
   const validateMobile = () => {
-    if (item.contact_no.length !== 10 || isNaN(item.contact_no)) {
-      setMerror("Plz enter 10 Digit Number")
+    if (formData.contact_no.length !== 10 || isNaN(formData.contact_no)) {
+      setMobileError("Please Enter 10 Digit Number")
     }
   }
 
   return (
     <>
 
-      <ToastContainer
-        position="top-right"
-        autoClose={1000}
-        hideProgressBar
-        newestOnTop={false}
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable={false}
-        pauseOnHover={false}
-        theme="light"
-      />
 
-      <div className="container">
-        <div className="row text-center mt-5">
-          <h3>User Data</h3>
-        </div>
+      {/* {(loading) ? <FlapperSpinner size={30} color="#686769" loading={loading} /> : null} */}
 
-        <button type="button" className="btn btn-add mb-2" data-bs-toggle="modal" data-bs-target="#staticBackdrop" onClick={onAdduserFun}>
-          Add User
-        </button>
+      {/* {(loading) ? <div style={{ width: '100wh', height: "100vh", margin: 'auto', display: 'block', background: "lightgray", text: "center" }}>
+        <ClipLoader color="#52bfd9" size={100} />
+      </div> : */}
+      {(loading) ? <div className="text-center mx-auto" style={{ height: "100vh", width: "100wh" }}>
+        <WhisperSpinner size={100} className="" color="#585858" />
+      </div> :
+        <>
+          <ToastContainer
+            position="top-right"
+            autoClose={1000}
+            hideProgressBar
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable={false}
+            pauseOnHover={false}
+            theme="light"
+          />
 
-        <div className="table-responsive">
-          <table className="table">
-            <thead className="table-dark">
-              <tr>
-                <th scope="col" className='text-center'>Name</th>
-                <th scope="col" className='text-center'>Email</th>
-                <th scope="col" className='text-center'>Contact No</th>
-                <th scope="col" className='text-center'>DOB</th>
-                <th scope="col" className='text-center'>Address</th>
-                <th scope='col'></th>
-              </tr>
-            </thead>
-            <tbody>
-              {
-                (locdata.length > 0) && locdata.map((val, ind) => {
-                  return (
-                    <List key={ind} val={val} deleteItem={deleteItem} updateItem={updateItem} />
-                  )
-                })
-              }
-            </tbody>
-          </table>
-          {!locdata.length > 0 && <div className='mt-2 text-center w-100'>No Data Found</div>}
-        </div>
+          <div className="container">
+            <div className="row text-center mt-5">
+              <h3>User Data</h3>
+            </div>
 
-        <mycontext.Provider value={[item, edit, setEdit, mError, setMerror]}>
-          <Modal handleChange={handleChange} getData={getData} onAdduserFun={onAdduserFun} validateMobile={validateMobile} />
-        </mycontext.Provider>
-      </div >
+            <button type="button" className="btn btn-add mb-2" data-bs-toggle="modal" data-bs-target="#staticBackdrop" onClick={onAdduserFun}>
+              Add User
+            </button>
+
+            <div className="table-responsive">
+              <table className="table">
+                <thead className="table-dark">
+                  <tr>
+                    <th scope="col" className='text-center'>Name</th>
+                    <th scope="col" className='text-center'>Email</th>
+                    <th scope="col" className='text-center'>Contact No</th>
+                    <th scope="col" className='text-center'>DOB</th>
+                    <th scope="col" className='text-center'>Address</th>
+                    <th scope='col'></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {
+                    (user.length > 0) && user.map((val, ind) => {
+                      return (
+                        <List key={ind} val={val} deleteItem={deleteItem} updateItem={updateItem} />
+                      )
+                    })
+                  }
+                </tbody>
+              </table>
+              {!user.length > 0 && <div className='mt-2 text-center w-100'>No Data Found</div>}
+            </div>
+
+            <mycontext.Provider value={[formData, edit, setEdit, mobileError, setMobileError]}>
+              <Modal handleChange={handleChange} getData={getData} onAdduserFun={onAdduserFun} validateMobile={validateMobile} />
+            </mycontext.Provider>
+          </div >
+        </>
+      }
     </>
   )
 }
@@ -314,7 +356,7 @@ export { mycontext }
 //     complete: false
 //   });
 
-//   const [item, setItem] = useState(JSON.parse(localStorage.getItem("taskData")) || []);
+//   const [formData, setFormData] = useState(JSON.parse(localStorage.getItem("taskData")) || []);
 //   const [update, setUpdate] = useState(false);
 //   const [edited, editedData] = useState(null);
 //   const [showData, setshowData] = useState("All");
@@ -322,15 +364,15 @@ export { mycontext }
 //   const [mymodal, setModal] = useState(false);
 
 //   useEffect(() => {
-//     localStorage.setItem("taskData", JSON.stringify(item));
-//   }, [item]);
+//     localStorage.setFormData("taskData", JSON.stringify(formData));
+//   }, [formData]);
 
 //   useEffect(() => {
-//     setprintData(item.filter((val) => {
-//       if (showData == "All") return val;
-//       else return val.status == showData;
+//     setprintData(formData.filter((val) => {
+//       if (showData === "All") return val;
+//       else return val.status === showData;
 //     }))
-//   }, [showData, item]);
+//   }, [showData, formData]);
 
 //   const changeHandle = (e) => {
 //     let name = e.target.name;
@@ -352,15 +394,15 @@ export { mycontext }
 //   });
 
 //   const addTask = () => {
-//     if (data.task == "" || data.status == "") {
+//     if (data.task === "" || data.status === "") {
 //       addFail();
 //     }
-//     else if (update == true) {
+//     else if (update === true) {
 //       setModal(false);
-//       setItem(
-//         item.map((val) => {
-//           if (val.id == edited.id) {
-//             data.complete = (data.status == "Incomplete") ? false : true;
+//       setFormData(
+//         formData.map((val) => {
+//           if (val.id === edited.id) {
+//             data.complete = (data.status === "Incomplete") ? false : true;
 //             return data;
 //           }
 //           return val;
@@ -388,8 +430,8 @@ export { mycontext }
 //       data.time = TaskTotTime;
 
 //       data.id = new Date().getTime();
-//       data.complete = (data.status == "Incomplete") ? false : true;
-//       setItem([...item, data]);
+//       data.complete = (data.status === "Incomplete") ? false : true;
+//       setFormData([...formData, data]);
 //       setData({
 //         task: "",
 //         status: "Incomplete",
@@ -403,13 +445,13 @@ export { mycontext }
 //   }
 
 //   const deleteItem = (id) => {
-//     let notdel = item.filter((val) => val.id != id);
-//     setItem(notdel);
+//     let notdel = formData.filter((val) => val.id !==id);
+//     setFormData(notdel);
 //     deleteSuccess();
 //   }
 
 //   const updateItem = (id, data) => {
-//     let upData = item.find((val) => val.id == id);
+//     let upData = formData.find((val) => val.id === id);
 
 //     setUpdate(true);
 //     setModal(true);
@@ -419,20 +461,20 @@ export { mycontext }
 //       status: upData.status,
 //       time: data.time,
 //       id: data.id,
-//       complete: (upData.status == "Incomplete") ? false : true
+//       complete: (upData.status === "Incomplete") ? false : true
 //     });
 //   }
 
 //   const chachboxHandle = (checked, id) => {
 //     let check = checked;
-//     let checkitem = item.find((val) => {
-//       return val.id == id;
+//     let checkitem = formData.find((val) => {
+//       return val.id === id;
 //     });
 //     checkitem.complete = check;
-//     checkitem.status = (check == true) ? "Complete" : "Incomplete";
-//     setItem(
-//       item.map((val) => {
-//         if (val.id == checkitem.id) {
+//     checkitem.status = (check === true) ? "Complete" : "Incomplete";
+//     setFormData(
+//       formData.map((val) => {
+//         if (val.id === checkitem.id) {
 //           return checkitem;
 //         }
 //         return val;
