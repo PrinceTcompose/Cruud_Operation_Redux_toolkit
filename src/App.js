@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, createContext } from 'react'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import axios from 'axios';
 import "./style.css"
@@ -6,6 +6,8 @@ import Modal from './Modal';
 import List from './List';
 import { ToastContainer, toast, Slide } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
+const mycontext = createContext();
 
 const App = () => {
 
@@ -20,12 +22,16 @@ const App = () => {
   const [locdata, setLocData] = useState([]);
   const [edit, setEdit] = useState(false);
   const [editedItem, seteditedItem] = useState(null);
+  const [mError, setMerror] = useState("");
+  const [editedEmail, setEditedEmail] = useState("");
 
   const fetchData = async () => {
     try {
-      const res = await axios.get("https://crudcrud.com/api/50e954902aab4576a41a3e1073c6fd38/users");
-      const data = res.data;
-      setLocData(data);
+      // const res = await axios.get("https://crudcrud.com/api/a3213d631a29425887e656e3249bbacd/users");
+      const { data: res } = await axios.get("https://crudcrud.com/api/a3213d631a29425887e656e3249bbacd/users");
+      // const data = res.data;
+      // setLocData(data);
+      setLocData(res);
     }
     catch (error) {
       console.log(error);
@@ -49,7 +55,7 @@ const App = () => {
   }
 
   const setApiData = () => {
-    axios.post('https://crudcrud.com/api/50e954902aab4576a41a3e1073c6fd38/users', {
+    axios.post('https://crudcrud.com/api/a3213d631a29425887e656e3249bbacd/users', {
       name: item.name,
       email: item.email,
       contact_no: item.contact_no,
@@ -60,7 +66,7 @@ const App = () => {
   }
 
   const setEditApiData = (id) => {
-    axios.put(`https://crudcrud.com/api/50e954902aab4576a41a3e1073c6fd38/users/${id}`, {
+    axios.put(`https://crudcrud.com/api/a3213d631a29425887e656e3249bbacd/users/${id}`, {
       name: item.name,
       email: item.email,
       contact_no: item.contact_no,
@@ -74,21 +80,23 @@ const App = () => {
 
   const getData = (e) => {
     e.preventDefault();
-    if (item.name == "" || item.email == "" || item.contact_no == "" || item.date_of_birth == "" || item.address == "") {
-      alert("Please Fill All the Data");
+    if (item.name == "" || item.email == "" || item.contact_no == "" || item.date_of_birth == "" || item.address == "" || mError !== "") {
+      // alert("Please Fill All the Data");
+      toast.error('Please Fill All Data !', {
+        position: toast.POSITION.TOP_RIGHT
+      });
     }
-    else if (edit && (item.name !== "" && item.email !== "" && item.contact_no !== "" && item.date_of_birth !== "" && item.address !== "")) {
+    else if (edit && (item.name !== "" && item.email !== "" && item.contact_no !== "" && item.date_of_birth !== "" && item.address !== "" && mError == "")) {
       // setLocData(locdata.map((val) => {
       //   if (val._id == editedItem._id) return item;
       //   return val;
-      // })) 
+      // }))       
       let email = locdata.find((val) => {
-        return val.email == locdata.email && val != val.email;
+        return item.email != editedEmail && val.email == item.email;
       });
       if (!email) {
         setEditApiData(editedItem._id);
         fetchData();
-        // window.location.reload(true);
         setEdit(false);
         seteditedItem(null);
         setItem({
@@ -104,16 +112,20 @@ const App = () => {
 
       }
       else {
-        alert("This Email is Already registered");
+        // alert("This Email is Already registered");
+        toast.error('This Email is Already registered !', {
+          position: toast.POSITION.TOP_RIGHT
+        });
       }
     }
     else {
       // setLocData([...locdata, item]);
       let email = locdata.find((val) => {
-        return val.email == locdata.email;
+        return val.email == item.email;
       });
 
       if (!email) {
+
         setApiData();
         fetchData();
         setItem({
@@ -126,10 +138,13 @@ const App = () => {
         toast.success('Task Added Successfully !', {
           position: toast.POSITION.TOP_RIGHT
         });
-        // window.location.reload(true);
+
       }
       else {
-        alert("Your Email is Already registered");
+        // alert("Your Email is Already registered");
+        toast.error('This Email is Already registered !', {
+          position: toast.POSITION.TOP_RIGHT
+        });
       }
 
 
@@ -150,6 +165,7 @@ const App = () => {
       return val._id == id;
     })
     seteditedItem(mydata);
+    setEditedEmail(mydata.email);
 
     setItem({
       name: mydata.name,
@@ -159,20 +175,29 @@ const App = () => {
       address: mydata.address
     });
   }
-
   const setDelApiData = (id) => {
-    axios.delete(`https://crudcrud.com/api/50e954902aab4576a41a3e1073c6fd38/users/${id}`);
+    try {
+      axios.delete(`https://crudcrud.com/api/a3213d631a29425887e656e3249bbacd/users/${id}`);
+    } catch (error) {
+      console.log(error);
+    }
+
   }
   const deleteItem = (id) => {
-    setLocData(locdata.filter((val) => val._id != id));
+    // setLocData(locdata.filter((val) => val._id != id));
     setDelApiData(id);
     fetchData();
     toast.error('Task Deleted Successfully !', {
       position: toast.POSITION.TOP_RIGHT
     });
-    window.location.reload(true);
+    // window.location.reload(true);
   }
 
+  const validateMobile = () => {
+    if (item.contact_no.length !== 10 || isNaN(item.contact_no)) {
+      setMerror("Plz enter 10 Digit Number")
+    }
+  }
 
   return (
     <>
@@ -213,28 +238,27 @@ const App = () => {
             </thead>
             <tbody>
               {
-                (locdata.length > 0) ? locdata.map((val, ind) => {
+                (locdata.length > 0) && locdata.map((val, ind) => {
                   return (
                     <List key={ind} val={val} deleteItem={deleteItem} updateItem={updateItem} />
                   )
-                }) : <div className='mt-2 text-center w-100'>No Data Found</div>
+                })
               }
             </tbody>
           </table>
+          {!locdata.length > 0 && <div className='mt-2 text-center w-100'>No Data Found</div>}
         </div>
 
-
-        <Modal item={item} handleChange={handleChange} getData={getData} edit={edit} setEdit={setEdit} onAdduserFun={onAdduserFun} />
-
+        <mycontext.Provider value={[item, edit, setEdit, mError, setMerror]}>
+          <Modal handleChange={handleChange} getData={getData} onAdduserFun={onAdduserFun} validateMobile={validateMobile} />
+        </mycontext.Provider>
       </div >
     </>
   )
 }
 
 export default App
-
-// https://crudcrud.com/api/50a59902769d4b4ca48a80e1cc274f81
-
+export { mycontext }
 
 
 
@@ -258,6 +282,15 @@ export default App
 
 
 
+
+
+
+
+
+
+
+
+  // 63da28e007307e03e8c77ad9
 
 
 
