@@ -6,13 +6,19 @@ import List from './List';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { axiosAPICall } from './utils';
-// import { FlapperSpinner } from 'react-spinners-kit';
-import ClipLoader from 'react-spinners/ClipLoader';
 import { WhisperSpinner } from 'react-spinners-kit';
+
+import { useDispatch, useSelector } from 'react-redux';
+import { showAllUser, addUser, deleteUser, updateUser } from "./features/userSlice";
 
 const mycontext = createContext();
 
 const App = () => {
+
+  const dispatch = useDispatch();
+  const dataOfUser = useSelector((state) => state.userData.usersDetail);
+
+  console.log("Data of User ::> ", dataOfUser);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -22,12 +28,12 @@ const App = () => {
     address: ""
   });
 
-  const [user, setUser] = useState([]);
   const [edit, setEdit] = useState(false);
   const [editedItem, seteditedItem] = useState(null);
   const [mobileError, setMobileError] = useState("");
   const [editedEmail, setEditedEmail] = useState("");
   const [loading, setLoading] = useState(true);
+  const [alreadyregEmail, setAlreadyRegEmail] = useState(false);
 
   const fetchData = () => {
     setLoading(true);
@@ -35,8 +41,8 @@ const App = () => {
       const respone = axiosAPICall('users', 'get');
 
       respone.then((result) => {
-        setUser(result);
         setLoading(false);
+        dispatch(showAllUser(result));
       });
 
     }
@@ -51,15 +57,30 @@ const App = () => {
   // console.log("Local Data ==> ", user);
 
   const onAdduserFun = () => {
-    setEdit(false);
-    setFormData({
-      name: "",
-      email: "",
-      contact_no: "",
-      date_of_birth: "",
-      address: ""
-    });
-    seteditedItem(null);
+    // console.log("alreadyregEmail  ::>> ", alreadyregEmail);
+    if (alreadyregEmail === true) {
+      setEdit(false);
+      seteditedItem(null);
+      setFormData({
+        name: formData.name,
+        email: "",
+        contact_no: formData.contact_no,
+        date_of_birth: formData.date_of_birth,
+        address: formData.address
+      });
+    }
+    else {
+      setAlreadyRegEmail(false);
+      setEdit(false);
+      setFormData({
+        name: "",
+        email: "",
+        contact_no: "",
+        date_of_birth: "",
+        address: ""
+      });
+      seteditedItem(null);
+    }
   }
 
   const setApiData = async () => {
@@ -74,7 +95,7 @@ const App = () => {
 
     console.log("Add Data ==> ", respone);
 
-    setUser(prev => [...prev, respone]);
+    dispatch(addUser(respone));
   }
 
   const setEditApiData = (id) => {
@@ -90,12 +111,8 @@ const App = () => {
     console.log('Edit respone :>> ', respone);
 
     respone.then((result) => {
-      (result === "") && setUser(user.map((detail) => {
-        if (detail._id === id) return editedDataObj
-        return detail;
-      }));
+      (result === "") && dispatch(updateUser([id, editedDataObj]));
     });
-
   }
 
 
@@ -104,20 +121,15 @@ const App = () => {
   const getData = (e) => {
     e.preventDefault();
     if (formData.name === "" || formData.email === "" || formData.contact_no === "" || formData.date_of_birth === "" || formData.address === "" || mobileError !== "") {
-      // alert("Please Fill All the Data");
       toast.error('Please Fill All Data !', {
         position: toast.POSITION.TOP_RIGHT
       });
     }
     else if (edit && (formData.name !== "" && formData.email !== "" && formData.contact_no !== "" && formData.date_of_birth !== "" && formData.address !== "" && mobileError === "")) {
-      // setUser(user.map((val) => {
-      //   if (val._id === editedItem._id) return formData;
-      //   return val;
-      // }))       
-      let email = user.find((val) => {
+      let email = dataOfUser.find((val) => {
         return formData.email !== editedEmail && val.email === formData.email;
       });
-      if (!email) {
+      if (email === undefined) {
         setEditApiData(editedItem._id);
 
         setEdit(false);
@@ -135,20 +147,19 @@ const App = () => {
 
       }
       else {
-        // alert("This Email is Already registered");
         toast.error('This Email is Already registered !', {
           position: toast.POSITION.TOP_RIGHT
         });
       }
     }
     else {
-      // setUser([...user, formData]);
-      let email = user.find((val) => {
+      let email = dataOfUser.find((val) => {
         return val.email === formData.email;
       });
+      // console.log("Email Already  ::>> ", email);
 
-      if (!email) {
-
+      if (email === undefined) {
+        setAlreadyRegEmail(false);
         setApiData();
 
         setFormData({
@@ -164,7 +175,7 @@ const App = () => {
 
       }
       else {
-        // alert("Your Email is Already registered");
+        setAlreadyRegEmail(true);
         toast.error('This Email is Already registered !', {
           position: toast.POSITION.TOP_RIGHT
         });
@@ -181,15 +192,12 @@ const App = () => {
     console.log('Delete respone :>> ', respone);
 
     respone.then((result) => {
-      (result === "") && setUser(user.filter((detail) => {
-        return detail._id !== id;
-      }));
+      (result === "") && dispatch(deleteUser(id));
     });
 
 
   }
   const deleteItem = (id) => {
-    // setUser(user.filter((val) => val._id !==id));
     setDelApiData(id);
 
     toast.error('Task Deleted Successfully !', {
@@ -207,7 +215,7 @@ const App = () => {
 
   const updateItem = (id) => {
     setEdit(true);
-    let mydata = user.find((val) => {
+    let mydata = dataOfUser.find((val) => {
       return val._id === id;
     })
     seteditedItem(mydata);
@@ -268,6 +276,7 @@ const App = () => {
               <table className="table">
                 <thead className="table-dark">
                   <tr>
+                    <th scope="col" className='text-center'>Sr No,</th>
                     <th scope="col" className='text-center'>Name</th>
                     <th scope="col" className='text-center'>Email</th>
                     <th scope="col" className='text-center'>Contact No</th>
@@ -278,18 +287,18 @@ const App = () => {
                 </thead>
                 <tbody>
                   {
-                    (user.length > 0) && user.map((val, ind) => {
+                    (dataOfUser.length > 0) && dataOfUser.map((val, ind) => {
                       return (
-                        <List key={ind} val={val} deleteItem={deleteItem} updateItem={updateItem} />
+                        <List key={ind} index={ind} val={val} deleteItem={deleteItem} updateItem={updateItem} />
                       )
                     })
                   }
                 </tbody>
               </table>
-              {!user.length > 0 && <div className='mt-2 text-center w-100'>No Data Found</div>}
+              {!dataOfUser.length > 0 && <div className='mt-2 text-center w-100'>No Data Found</div>}
             </div>
 
-            <mycontext.Provider value={[formData, edit, setEdit, mobileError, setMobileError]}>
+            <mycontext.Provider value={[formData, edit, setEdit, mobileError, setMobileError, alreadyregEmail, setAlreadyRegEmail]}>
               <Modal handleChange={handleChange} getData={getData} onAdduserFun={onAdduserFun} validateMobile={validateMobile} />
             </mycontext.Provider>
           </div >
@@ -299,8 +308,8 @@ const App = () => {
   )
 }
 
-export default App
-export { mycontext }
+export default App;
+export { mycontext };
 
 
 

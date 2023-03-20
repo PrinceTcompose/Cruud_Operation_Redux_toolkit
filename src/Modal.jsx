@@ -1,7 +1,7 @@
 import React, { useContext } from 'react'
 import { mycontext } from './App';
 
-const Modal = ({ handleChange, getData, validateMobile }) => {
+const Modal = ({ handleChange, getData, validateMobile, alreadyregEmail, setAlreadyRegEmail }) => {
     const [formData, edit, setEdit, mobileError, setMobileError] = useContext(mycontext);
     return (
         <>
@@ -32,7 +32,7 @@ const Modal = ({ handleChange, getData, validateMobile }) => {
                                 <textarea name="address" id="" value={formData.address} rows="5" className='form-control' onChange={handleChange}></textarea>
 
                                 <div className="mt-3">
-                                    <button type="submit" className="btn btn-add px-3" id="task-added" data-bs-dismiss={(formData.name == "" || formData.email == "" || formData.contact_no == "" || formData.date_of_birth == "" || formData.address == "" || mobileError !== "") ? "" : "modal"}>{(edit) ? "Update User" : "Add User"}</button>
+                                    <button type="submit" className="btn btn-add px-3" id="task-added" data-bs-dismiss={(formData.name == "" || formData.email == "" || formData.contact_no == "" || formData.date_of_birth == "" || formData.address == "" || mobileError !== "" || setAlreadyRegEmail == true) ? "" : "modal"}>{(edit) ? "Update User" : "Add User"}</button>
                                     <button type="button" className="btn btn-cancel px-3 ms-2" data-bs-dismiss="modal">Cancel</button>
                                 </div>
                             </form>

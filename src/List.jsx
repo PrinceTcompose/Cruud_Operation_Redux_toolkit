@@ -1,9 +1,10 @@
 import React from 'react'
 
-const List = ({ val, deleteItem, updateItem }) => {
+const List = ({ index, val, deleteItem, updateItem }) => {
     return (
         <>
             <tr className="align-middle">
+                <td className='text-center'>{index + 1}</td>
                 <td className='text-center'>{val.name}</td>
                 <td className='text-center'>{val.email}</td>
                 <td className='text-center'>{val.contact_no}</td>
