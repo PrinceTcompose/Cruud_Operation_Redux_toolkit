@@ -20,8 +20,9 @@ export const userSlice = createSlice({
         },
 
         deleteUser: (state, action) => {
-            state.usersDetail = state.usersDetail.filter((val) => {
-                return val._id !== action.payload;
+            let prevUser = JSON.parse(JSON.stringify(state.usersDetail));
+            state.usersDetail = prevUser.filter((user) => {
+                return user._id !== action.payload;
             })
         },
 
